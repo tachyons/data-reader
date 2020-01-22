@@ -34,9 +34,13 @@ public class CSVReader {
         }
     }
 
-    public void readCSV() throws DatasetIntegrityError {
+    public List<CSVRecord> getCSVRecords() throws DatasetIntegrityError {
         Reader in = getFileReader(path);
-        List<CSVRecord> list = getCSVRecords(in);
+        return getCSVRecords(in);
+    }
+
+    public void readCSV() throws DatasetIntegrityError {
+        List<CSVRecord> list = getCSVRecords();
         for (CSVRecord record: list) {
             Iterator recordIterator = record.iterator();
             while (recordIterator.hasNext()) {
