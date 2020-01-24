@@ -17,6 +17,7 @@ public class DataConverter {
         for (int entityIndex = 0; entityIndex < entities.size() ; entityIndex++) {
             String currentEntity = entities.get(entityIndex);
             Document doc = new Document("entity", currentEntity);
+
             for (int indicatorIndex = 0; indicatorIndex < indicators.size(); indicatorIndex++) {
                 doc.append(indicators.get(indicatorIndex), dataGroupedByEntities.get(entityIndex).get(indicatorIndex).getValue());
             }
@@ -26,3 +27,5 @@ public class DataConverter {
         return documents;
     }
 }
+
+
