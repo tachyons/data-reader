@@ -1,5 +1,5 @@
 package org.metastringfoundation.healthheatmap;
 
 public interface DataStorer {
-    public void saveDataset(Dataset dataset);
+    public void addDataset(Dataset dataset);
 }

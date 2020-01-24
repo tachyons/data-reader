@@ -12,6 +12,7 @@ public class CSVDataset implements Dataset {
     private CSVDatasetRangeReference indicatorInfo;
     private CSVDatasetRangeReference entityInfo;
     private CSVDatasetRangeReference dataInfo;
+    private DatasetMetadata metadata;
 
     private CSVReader csvReader;
     private List<CSVRecord> records;
@@ -25,6 +26,7 @@ public class CSVDataset implements Dataset {
         private CSVDatasetRangeReference indicatorInfo = new CSVDatasetRangeReference("B0:0");
         private CSVDatasetRangeReference entityInfo = new CSVDatasetRangeReference("A1:A");
         private CSVDatasetRangeReference dataInfo = new CSVDatasetRangeReference("B1: "); //TODO avoid the space hack on part two of the reference
+        private DatasetMetadata metadata = new DatasetMetadata("Untitled");
 
         public builder path(String path) {
             this.path = path;
@@ -54,6 +56,11 @@ public class CSVDataset implements Dataset {
             return this;
         }
 
+        public builder metadata(DatasetMetadata metadata) {
+            this.metadata = metadata;
+            return this;
+        }
+
         public CSVDataset build() throws DatasetIntegrityError {
             if (this.path == null) {
                 throw new DatasetIntegrityError("Path to CSV must be set with builder");
@@ -71,6 +78,7 @@ public class CSVDataset implements Dataset {
         this.indicatorInfo = b.indicatorInfo;
         this.entityInfo = b.entityInfo;
         this.dataInfo = b.dataInfo;
+        this.metadata = b.metadata;
         parseData();
     }
 
@@ -145,5 +153,10 @@ public class CSVDataset implements Dataset {
     @Override
     public List<List<DataPoint>> getDataGroupedByEntities() {
         return this.dataGroupedByEntities;
+    }
+
+    @Override
+    public DatasetMetadata getMetadata() {
+        return this.metadata;
     }
 }

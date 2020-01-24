@@ -11,7 +11,7 @@ public class Main {
 
         DataStorer dataStorer = new MultiplexDataStorer();
 
-        dataStorer.saveDataset(dataset);
+        dataStorer.addDataset(dataset);
 
     }
 }

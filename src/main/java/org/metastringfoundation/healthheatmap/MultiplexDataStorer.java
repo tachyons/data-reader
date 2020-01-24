@@ -8,7 +8,7 @@ public class MultiplexDataStorer implements DataStorer {
     }
 
     @Override
-    public void saveDataset(Dataset dataset) {
-        this.mongodb.saveDataset(dataset);
+    public void addDataset(Dataset dataset) {
+        this.mongodb.addDataset(dataset);
     }
 }
