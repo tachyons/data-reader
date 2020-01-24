@@ -10,8 +10,8 @@ public class Main {
         try {
             CommandLine commandLine = new CLI().parse(args);
 
-            String path = commandLine.getOptionValue("PATH_OPTION");
-            String datasetName = commandLine.getOptionValue("DATASET_NAME_OPTION");
+            String path = commandLine.getOptionValue("path");
+            String datasetName = commandLine.getOptionValue("name");
 
             Dataset dataset = new CSVDataset
                     .builder()

@@ -6,12 +6,12 @@ public class CLI {
     //TODO convert the other builder in this project to static class
     final static Option datasetName = Option.builder("n")
             .hasArg()
-            .longOpt("DATASET_NAME_OPTION")
+            .longOpt("name")
             .build();
     final static Option path = Option.builder("p")
             .required()
             .hasArg()
-            .longOpt("PATH_OPTION")
+            .longOpt("path")
             .desc("Path to the file")
             .build();
 
