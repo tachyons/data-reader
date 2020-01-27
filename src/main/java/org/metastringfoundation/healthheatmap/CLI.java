@@ -9,15 +9,18 @@ public class CLI {
             .longOpt("name")
             .build();
     final static Option path = Option.builder("p")
-            .required()
             .hasArg()
             .longOpt("path")
             .desc("Path to the file")
             .build();
 
+    final static Option random = new Option("r", "random", false, "Generate random data");
+
     public final static Options options = new Options()
             .addOption(path)
-            .addOption(datasetName);
+            .addOption(datasetName)
+            .addOption(random)
+            ;
 
     public CommandLine parse(String[] args) throws IllegalArgumentException, ParseException {
 

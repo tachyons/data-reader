@@ -6,22 +6,36 @@ import org.apache.commons.cli.ParseException;
 public class Main {
 
     public static void main(String[] args) throws IllegalArgumentException {
-
         try {
             CommandLine commandLine = new CLI().parse(args);
 
-            String path = commandLine.getOptionValue("path");
-            String datasetName = commandLine.getOptionValue("name");
-
-            Dataset dataset = new CSVDataset
-                    .builder()
-                    .metadata(new DatasetMetadata(datasetName))
-                    .path(path)
-                    .build();
-
             DataStorer dataStorer = new MultiplexDataStorer();
 
-            dataStorer.addDataset(dataset);
+            String path = commandLine.getOptionValue("path");
+            String datasetName = commandLine.getOptionValue("name");
+            boolean random = commandLine.hasOption("random");
+
+            if (random) {
+                int GENERATE_THIS_MANY_DATASETS = 10;
+                for (int datasetNumber = 0; datasetNumber < GENERATE_THIS_MANY_DATASETS; datasetNumber++) {
+                    Dataset dataset = new RandomDataset.builder()
+                            .entities(600)
+                            .indicators(300)
+                            .name("Random Dataset " + Integer.toString(datasetNumber))
+                            .build();
+
+                    dataStorer.addDataset(dataset);
+                }
+            } else {
+
+                Dataset dataset = new CSVDataset
+                        .builder()
+                        .metadata(new DatasetMetadata(datasetName))
+                        .path(path)
+                        .build();
+
+                dataStorer.addDataset(dataset);
+            }
 
         } catch (ParseException e) {
             CLI.printHelp();
