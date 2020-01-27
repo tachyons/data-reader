@@ -16,14 +16,16 @@ public class Main {
             boolean random = commandLine.hasOption("random");
 
             if (random) {
-                int GENERATE_THIS_MANY_DATASETS = 10;
+                Dataset dataset;
+                int GENERATE_THIS_MANY_DATASETS = 20;
                 for (int datasetNumber = 0; datasetNumber < GENERATE_THIS_MANY_DATASETS; datasetNumber++) {
-                    Dataset dataset = new RandomDataset.builder()
-                            .entities(600)
-                            .indicators(300)
+                    dataset = new RandomDataset.builder()
+                            .entities(500)
+                            .indicators(500)
                             .name("Random Dataset " + Integer.toString(datasetNumber))
                             .build();
 
+                    System.out.println("adding dataset " + datasetNumber);
                     dataStorer.addDataset(dataset);
                 }
             } else {

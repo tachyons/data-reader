@@ -8,29 +8,31 @@ import com.mongodb.client.model.UpdateOptions;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
-import javax.print.Doc;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.*;
 
 public class MongoDB implements Database {
     private MongoCollection<Document> collectionOfDatasets;
     private MongoCollection<Document> collectionOfEntities;
+    private MongoCollection<Document> skinnyCollection;
 
     public MongoDB() {
         MongoClient mongoClient = new MongoClient();
         MongoDatabase database = mongoClient.getDatabase("healthdata");
         this.collectionOfDatasets = database.getCollection("groupedByDataset");
         this.collectionOfEntities = database.getCollection("groupedByEntities");
+        this.skinnyCollection = database.getCollection("skinny");
     }
 
     @Override
     public void addDataset(Dataset dataset) {
         addDatasetAsDatasets(dataset);
         addDatasetAsEntities(dataset);
-
+        addDatasetAsSkinny(dataset);
     }
 
     private void addDatasetAsDatasets(Dataset dataset) {
@@ -97,6 +99,45 @@ public class MongoDB implements Database {
                     datasetUpdate,
                     upsert
             );
+        }
+    }
+
+    private void addDatasetAsSkinny(Dataset dataset) {
+        List<String> indicators = dataset.getIndicators();
+        List<String> entities = dataset.getEntities();
+        List<List<DataPoint>> dataGroupedByEntities = dataset.getDataGroupedByEntities();
+        DatasetMetadata metadata = dataset.getMetadata();
+
+        String datasetName = metadata.getName();
+        UpdateOptions upsert = new UpdateOptions().upsert(true);
+
+        Bson update;
+        Bson datasetFilter;
+
+        String indicatorName;
+        String entityName;
+
+        for (int entityIndex = 0; entityIndex < entities.size(); entityIndex++) {
+            entityName = entities.get(entityIndex);
+
+            for (int indicatorIndex = 0; indicatorIndex < indicators.size(); indicatorIndex++) {
+                indicatorName = indicators.get(indicatorIndex);
+
+                datasetFilter = and(
+                        eq("entity", entityName),
+                        eq("indicator", indicatorName),
+                        eq("source", datasetName)
+                );
+
+                Object value = dataGroupedByEntities.get(entityIndex).get(indicatorIndex).getValue();
+                update = set("value", value);
+                this.skinnyCollection.updateOne(
+                        datasetFilter,
+                        update,
+                        upsert
+                );
+            }
+
         }
     }
 }
