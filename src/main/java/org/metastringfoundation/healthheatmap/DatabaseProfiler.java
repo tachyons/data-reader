@@ -1,29 +1,29 @@
 package org.metastringfoundation.healthheatmap;
 
 import com.mongodb.MongoClient;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.InsertOneModel;
 import com.mongodb.client.model.WriteModel;
 import org.bson.Document;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import static com.mongodb.client.model.Filters.and;
-import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Sorts.descending;
+import static com.mongodb.client.model.Sorts.orderBy;
 
 public class DatabaseProfiler {
     private int datasets = 20;
     private int indicators = 500;
     private int entities = 500;
 
-    Random random = new Random();
+    long randomSeed;
     private Timer timer;
 
     private MongoCollection<Document> collectionOfDatasets;
@@ -35,10 +35,15 @@ public class DatabaseProfiler {
 
     String action;
 
+    private String entityNameForQuery = "Entity100";
+    private String datasetNameForQuery = "Dataset10";
+    private String indicatorNameForQuery = "Indicator100";
+
 
     public DatabaseProfiler(String action) {
         timer = new Timer();
         this.action = action;
+        randomSeed = 2048;
 
         MongoClient mongoClient = new MongoClient();
         MongoDatabase database = mongoClient.getDatabase("healthdata");
@@ -81,24 +86,41 @@ public class DatabaseProfiler {
         timer.result("Filling up postgresql as different tables");
     }
 
+    private void dropMongo() {
+        skinnyCollection.drop();
+    }
+
+    private void dropAndRecreatePSQL() throws SQLException {
+        String dropDB = "DROP DATABASE healthdata;";
+        Statement statement = psqlConnection.createStatement();
+        statement.executeUpdate(dropDB);
+    }
+
     private void mongoAsSkinny() {
-        for (int entityIndex = 0; entityIndex < entities; entityIndex++) {
-            for (int indicatorIndex = 0; indicatorIndex < indicators ; indicatorIndex++) {
+        Random random = new Random(randomSeed);
+
+        for (int datasetIndex = 0; datasetIndex < datasets; datasetIndex++) {
+            for (int entityIndex = 0; entityIndex < entities; entityIndex++) {
                 List<WriteModel<Document>> bulkList = new ArrayList<>();
-                for (int datasetIndex = 0; datasetIndex < datasets; datasetIndex++) {
+                for (int indicatorIndex = 0; indicatorIndex < indicators ; indicatorIndex++) {
                     Document doc = new Document();
                     doc.append("value", random.nextFloat());
-                    doc.append("entity", "Entity " + entityIndex);
-                    doc.append("indicator", "Indicator " + indicatorIndex);
-                    doc.append("dataset", "Dataset " + datasetIndex);
+                    doc.append("entity", "Entity" + entityIndex);
+                    doc.append("indicator", "Indicator" + indicatorIndex);
+                    doc.append("dataset", "Dataset" + datasetIndex);
                     bulkList.add(new InsertOneModel<>(doc));
                 }
                 skinnyCollection.bulkWrite(bulkList);
             }
         }
+
+        System.out.println("Filled MongoDB skinnyCollection");
+        skinnyCollection.createIndex(Indexes.ascending("entity", "indicator", "dataset"));
+        System.out.println("Created indexes for the collection");
     }
 
     private void psqlAsDifferentTables() throws SQLException {
+        Random random = new Random(randomSeed);
         for (int datasetIndex = 0; datasetIndex < datasets; datasetIndex++) {
             String datasetName = "Dataset" + datasetIndex;
             Statement statement;
@@ -129,6 +151,19 @@ public class DatabaseProfiler {
             }
             statement.close();
             psqlConnection.commit();
+
+            statement = psqlConnection.createStatement();
+            for (int indicatorIndex = 0; indicatorIndex < indicators; indicatorIndex++) {
+                String indicatorName = "Indicator" + indicatorIndex;
+                String indexName = "idx_" + datasetName + "_" + indicatorName;
+                StringBuilder createIndexSQL = new StringBuilder("CREATE INDEX ");
+                createIndexSQL.append(indexName + " ON ");
+                createIndexSQL.append(datasetName + "(" + indicatorName + ");");
+
+                statement.executeUpdate(createIndexSQL.toString());
+            }
+            statement.close();
+            psqlConnection.commit();
         }
     }
 
@@ -139,47 +174,64 @@ public class DatabaseProfiler {
 
     private void queryMongoDB() {
         timer.reset();
-        askMongoForSomeEntityData();
-        timer.result("mongoEntityData");
+        askMongoForSomeSpecificData();
+        timer.result("mongoSpecificData");
+        timer.reset();
+        askMongoForAllDataOnAnEntity();
+        timer.result("mongoFirstOfAllDataOnAnEntity");
+        timer.reset();
+        askMongoForHighestValueLessThanSomething((float) 0.5);
+        timer.result("mongoHighestValueLessThanFloat");
     }
     private void queryPostgresql() {
         try {
             createPSQLStatement();
             timer.reset();
-            askPsqlForSomeEntityData();
-            timer.result("psqlEntityData");
+            askPsqlForSomeSpecificData();
+            timer.result("psqlSpecificData");
             closePSQLStatement();
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void askMongoForSomeEntityData() {
-        String entityName = "Entity100";
-        String datasetName = "Dataset10";
-        String indicatorName = "Indicator100";
+    private void askMongoForSomeSpecificData() {
+        Document result = skinnyCollection.find(and(
+                eq("entity", entityNameForQuery),
+                eq("dataset", datasetNameForQuery),
+                eq("indicator", indicatorNameForQuery)
+        )).first();
 
-        skinnyCollection.find(and(
-                eq("entity", entityName),
-                eq("dataset", datasetName),
-                eq("indicator", indicatorName)
-        ));
+        System.out.println(result.get("value"));
+    }
+
+    private void askMongoForHighestValueLessThanSomething(float value) {
+        Document result = skinnyCollection.find(lt("value", value))
+                .sort(orderBy(descending("value"))).first();
+        System.out.println(result.get("value"));
+    }
+
+    private void askMongoForAllDataOnAnEntity() {
+        FindIterable<Document> documents = skinnyCollection.find(
+                eq("entity", entityNameForQuery)
+        );
+        System.out.println(documents.first().get("value"));
     }
 
     private void createPSQLStatement() throws SQLException {
         statement = psqlConnection.createStatement();
     }
 
-    private void askPsqlForSomeEntityData() throws SQLException {
-        String entityName = "Entity100";
-        String datasetName = "Dataset10";
-        String indicatorName = "Indicator100";
+    private void askPsqlForSomeSpecificData() throws SQLException {
 
         String selectSQL;
 
-        selectSQL = "Select " + indicatorName + " from " +datasetName +" WHERE entityname=" + wrapInQuote(entityName) +";";
+        selectSQL = "Select " + indicatorNameForQuery + " from " +datasetNameForQuery +" WHERE entityname=" + wrapInQuote(entityNameForQuery) +";";
 
-        statement.executeQuery(selectSQL);
+        ResultSet resultSet = statement.executeQuery(selectSQL);
+        resultSet.next();
+        float result = resultSet.getFloat(indicatorNameForQuery);
+        System.out.println(result);
     }
 
     private void closePSQLStatement() throws SQLException {
