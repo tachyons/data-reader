@@ -14,6 +14,8 @@ public class Main {
             String path = commandLine.getOptionValue("path");
             String datasetName = commandLine.getOptionValue("name");
             boolean random = commandLine.hasOption("random");
+            boolean profiler = commandLine.hasOption("profiler");
+            String profilerAction = commandLine.getOptionValue("profiler");
 
             if (random) {
                 Dataset dataset;
@@ -28,6 +30,10 @@ public class Main {
                     System.out.println("adding dataset " + datasetNumber);
                     dataStorer.addDataset(dataset);
                 }
+            } else if (profiler) {
+                System.out.println("Starting profiler...");
+                new DatabaseProfiler(profilerAction).run();
+                System.out.println("Ended profiling.");
             } else {
 
                 Dataset dataset = new CSVDataset

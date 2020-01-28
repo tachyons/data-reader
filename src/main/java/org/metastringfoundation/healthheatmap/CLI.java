@@ -15,11 +15,13 @@ public class CLI {
             .build();
 
     final static Option random = new Option("r", "random", false, "Generate random data");
+    final static Option profiler = new Option("s", "profiler", true, "Profiler");
 
     public final static Options options = new Options()
             .addOption(path)
             .addOption(datasetName)
             .addOption(random)
+            .addOption(profiler)
             ;
 
     public CommandLine parse(String[] args) throws IllegalArgumentException, ParseException {
