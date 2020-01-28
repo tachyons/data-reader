@@ -107,37 +107,45 @@ public class MongoDB implements Database {
         List<String> entities = dataset.getEntities();
         List<List<DataPoint>> dataGroupedByEntities = dataset.getDataGroupedByEntities();
         DatasetMetadata metadata = dataset.getMetadata();
-
-        String datasetName = metadata.getName();
         UpdateOptions upsert = new UpdateOptions().upsert(true);
 
-        Bson update;
-        Bson datasetFilter;
-
-        String indicatorName;
+        String datasetName = metadata.getName();
         String entityName;
 
-        for (int entityIndex = 0; entityIndex < entities.size(); entityIndex++) {
-            entityName = entities.get(entityIndex);
+        class MongoSave implements Runnable {
+            private int entityIndex;
 
-            for (int indicatorIndex = 0; indicatorIndex < indicators.size(); indicatorIndex++) {
-                indicatorName = indicators.get(indicatorIndex);
-
-                datasetFilter = and(
-                        eq("entity", entityName),
-                        eq("indicator", indicatorName),
-                        eq("source", datasetName)
-                );
-
-                Object value = dataGroupedByEntities.get(entityIndex).get(indicatorIndex).getValue();
-                update = set("value", value);
-                this.skinnyCollection.updateOne(
-                        datasetFilter,
-                        update,
-                        upsert
-                );
+            private MongoSave(
+                    int entityIndex
+            ) {
+                this.entityIndex = entityIndex;
             }
+            public void run() {
+                String entityName = entities.get(entityIndex);
+                List<DataPoint> dataOfTheEntity = dataGroupedByEntities.get(entityIndex);
+                for (int indicatorIndex = 0; indicatorIndex < indicators.size(); indicatorIndex++) {
+                    String indicatorName = indicators.get(indicatorIndex);
 
+                    Bson datasetFilter = and(
+                            eq("entity", entityName),
+                            eq("indicator", indicatorName),
+                            eq("source", datasetName)
+                    );
+
+                    Object value = dataOfTheEntity.get(indicatorIndex).getValue();
+                    Bson update = set("value", value);
+                    skinnyCollection.updateOne(
+                            datasetFilter,
+                            update,
+                            upsert
+                    );
+                }
+            }
+        }
+
+        for (int entityIndex = 0; entityIndex < entities.size(); entityIndex++) {
+            Thread t = new Thread(new MongoSave(entityIndex));
+            t.start();
         }
     }
 }
